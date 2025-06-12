@@ -1,0 +1,97 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO 넘어짐 감지 시스템</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #e9ecef; }
+        .status-box { font-weight: bold; padding: 10px; border-radius: 5px; text-align: center; display: inline-block; min-width: 150px; }
+        .status-ok { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .status-warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .status-danger { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .status-info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .video-feed { text-align: center; margin-top: 20px; }
+        .video-feed img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YOLO 넘어짐 감지 시스템</h1>
+
+        <div class="section">
+            <h2>시스템 상태</h2>
+            <p>카카오톡 인증 상태: <span id="kakaoStatus" class="status-box">{{ kakao_auth_status }}</span></p>
+            <p>넘어짐 감지 상태: <span id="fallStatus" class="status-box">로딩 중...</span></p>
+            
+            {% if kakao_auth_status == "카카오 인증 필요" or kakao_auth_status == "카카오 인증 필요 (갱신 실패)" or kakao_auth_status == "카카오 인증 필요 (Refresh Token 없음)" %}
+            <p>카카오톡 알림을 받으려면 인증이 필요합니다:</p>
+            <a href="{{ kakao_auth_url }}" target="_blank" class="button">카카오톡 인증하기</a>
+            {% endif %}
+        </div>
+
+        <div class="section video-feed">
+            <h2>실시간 카메라 영상</h2>
+            <img src="{{ url_for('video_feed') }}" width="640" height="480" alt="Camera Feed">
+        </div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            fetch('/status')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const kakaoStatusElement = document.getElementById('kakaoStatus');
+                    const fallStatusElement = document.getElementById('fallStatus');
+
+                    kakaoStatusElement.textContent = data.kakao_auth_status;
+                    if (data.kakao_auth_status.includes("인증 완료")) {
+                        kakaoStatusElement.className = "status-box status-ok";
+                    } else if (data.kakao_auth_status.includes("인증 필요")) {
+                        kakaoStatusElement.className = "status-box status-warning";
+                    } else {
+                        kakaoStatusElement.className = "status-box status-info"; // 기타 정보성 메시지
+                    }
+
+                    fallStatusElement.textContent = data.fall_status;
+                    if (data.fall_status === "넘어짐 감지!") {
+                        fallStatusElement.className = "status-box status-danger";
+                    } else if (data.fall_status === "안전") {
+                        fallStatusElement.className = "status-box status-ok";
+                    } else {
+                        fallStatusElement.className = "status-box status-info"; // 로딩 중 등
+                    }
+                })
+                .catch(error => console.error('상태 업데이트 실패:', error));
+        }
+
+        // 1초마다 상태 업데이트
+        setInterval(updateStatus, 100);
+        // 페이지 로드 시 즉시 업데이트
+        window.onload = updateStatus;
+    </script>
+</body>
+</html>

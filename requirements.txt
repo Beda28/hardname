@@ -1,0 +1,9 @@
+opencv-python
+numpy
+torch
+ultralytics
+requests
+Flask
+Pillow
+seaborn
+mediapipe
